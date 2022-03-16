@@ -2,7 +2,7 @@ import threading
 import socket
 
 host = '127.0.0.1'  # localhost
-port = 8181
+port = 8585
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((host, port))
@@ -46,7 +46,7 @@ def receive():
         client.send("Connected to the server!".encode('ascii'))
 
         # Creating thread so users can be handles "simultaneously"
-        thread = threading.Thread(target=handle(), args=(client,))
+        thread = threading.Thread(target=handle, args=(client,))
         thread.start()
 
 # Running function
