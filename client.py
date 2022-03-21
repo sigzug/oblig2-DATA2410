@@ -70,7 +70,7 @@ def write(input):
         client.send(message.encode('ascii'))
 
 
-# Threading
+# Threading threads
 receiveThread = threading.Thread(target=receive)
 receiveThread.start()
 
