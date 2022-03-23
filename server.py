@@ -46,7 +46,7 @@ def receive():
     while True:
 
         # Sets up client variable and address with accept()
-        client, address = server.accept()-
+        client, address = server.accept()
         print(f"Connected with {str(address)}")
 
         # Asks for nickname (TEMPORARY)
