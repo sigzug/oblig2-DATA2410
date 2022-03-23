@@ -16,7 +16,7 @@ clients = []
 nicknames = []
 
 # (TEMPORARY) List of sentences. JUST FOR TESTING
-actions = ["Why don't we sing?"] #["work", "play", "eat", "cry", "sleep", "fight"]
+#actions = ["Why don't we sing?"] #["work", "play", "eat", "cry", "sleep", "fight"]
 
 # Broadcasts message to all clients in clients list
 def broadcast(message):
@@ -26,19 +26,23 @@ def broadcast(message):
 # Handles input from clients
 def handle(client):
     while True:
+
+        # Picks up message from client and prints to console
         try:
-            # Picks up message from client and prints to console
             message = client.recv(1024).decode('ascii')
-            print(message)
-            ##broadcast(message)
+
+            if message == "exit":
+                disconnect(client)
+                break
+            else:
+                print(message)
+                ##broadcast(message)
         except:
-            index = clients.index(client)
-            clients.remove(client)
-            client.close()
-            nickname = nicknames[index]
-            broadcast(f'{nickname} left the chat'.encode('ascii'))
-            nicknames.remove(nickname)
+            disconnect(client)
             break
+
+        action = input("\nServer: ")
+        client.send(action.encode('ascii'))
 
 
 
@@ -57,21 +61,39 @@ def receive():
         nicknames.append(nickname)
         clients.append(client)
 
-        # Picks a random action from a list with sentences (TEMPORARY)
-        # PUT INPUT HERE WHEN WORKING!!
-        action = random.choice(actions)
+        action = input("\nServer: ")
 
-        # Prints information to console for logging
-        print(f'Nickname of the client is {nickname}')
-        print(f'Do you guys want to {action}')
+        # If client disconnects mid-input interrupt, server prints that to the console and moves on
+        try:
+            # Sends the action sentence to the client
+            client.send(f'{action}'.encode('ascii'))
+            ##client.send('Connected to the server'.encode('ascii'))
 
-        # Sends the action sentence to the client
-        client.send(f'{action}'.encode('ascii'))
-        ##client.send('Connected to the server'.encode('ascii'))
+            # Prints information to console for logging
+            print(f"\nNickname of the client is '{nickname}'")
 
-        # Starts thread in function handle()
-        thread = threading.Thread(target=handle, args=(client,))
-        thread.start()
+            # Starts thread in function handle()
+            thread = threading.Thread(target=handle, args=(client,))
+            thread.start()
+        except:
+            #Prints error message to console
+            print(f"Client '{nickname}' has disconnected")
+
+            # Removes client information from lists and such
+            disconnect(client)
+
+# Handling disconnecting clients
+def disconnect(client):
+    index = clients.index(client)
+    nickname = nicknames[index]
+    clients.remove(client)
+    client.close()
+
+    broadcast(f'{nickname} left the chat'.encode('ascii'))
+    print(f"'{nickname}' has disconnected!")
+    nicknames.remove(nickname)
+
+    print("\nServer is listening...")
 
 print("Server is listening...")
 receive()
