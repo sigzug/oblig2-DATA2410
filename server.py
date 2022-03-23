@@ -20,7 +20,7 @@ def broadcast(message):
 def handle(client):
     while True:
         try:
-            message = client.recv(1024)
+            message = client.recv(1024).decode('ascii')
             print(message)
             #broadcast(message)
         except:
