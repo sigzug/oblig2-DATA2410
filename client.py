@@ -45,6 +45,7 @@ bot = ''
 
 # Accepted verbs for response from bots
 verbs = ["sing", "talk", "kill", "fight", "kiss", "dream", "grown"]
+action = ''
 
 # Main functions -------------------------------------------
 def connect():
@@ -57,9 +58,9 @@ def connect():
     client.connect((ip, port))
 
 def receive():
-    global alice, action, bob, dora, chuck
 
     # Boolean for tracking if nickname has been asked or not
+    global action
     counter = False
 
     while True:
@@ -97,13 +98,13 @@ def receive():
                     break
 
                 # Bot responses to verb
-                alice = alice(action)
-                bob = bob(action)
-                dora, doraAction = dora(action)
-                chuck = chuck(action, doraAction)
+                aliceV = alice(action)
+                bobV = bob(action)
+                doraV, doraAction = dora(action)
+                chuckV = chuck(action, doraAction)
 
                 # Making output string from responses
-                output = f'Alice: {alice}\nBob: {bob}\nDora: {dora}\nChuck: {chuck}'
+                output = f'Alice: {aliceV}\nBob: {bobV}\nDora: {doraV}\nChuck: {chuckV}'
 
                 # Sending message to server
                 write(output)

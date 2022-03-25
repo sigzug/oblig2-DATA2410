@@ -1,3 +1,4 @@
+import os
 import random
 import threading
 import socket
@@ -26,7 +27,6 @@ def broadcast(message):
 # Handles input from clients
 def handle(client):
     while True:
-
         # Picks up message from client and prints to console
         try:
             message = client.recv(1024).decode('ascii')
@@ -42,12 +42,19 @@ def handle(client):
             break
 
         action = input("\nServer: ")
-        client.send(action.encode('ascii'))
+
+        try:
+            client.send(action.encode('ascii'))
+        except:
+            disconnect(client)
+            break
 
 
 
 def receive():
     while True:
+        if len(clients) == 0:
+            print("\nServer is listening...")
 
         # Sets up client variable and address with accept()
         client, address = server.accept()
@@ -75,6 +82,7 @@ def receive():
             # Starts thread in function handle()
             thread = threading.Thread(target=handle, args=(client,))
             thread.start()
+
         except:
             #Prints error message to console
             print(f"Client '{nickname}' has disconnected")
@@ -95,5 +103,6 @@ def disconnect(client):
 
     print("\nServer is listening...")
 
-print("Server is listening...")
+
+#print("Server is listening...")
 receive()
