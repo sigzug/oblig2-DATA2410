@@ -22,7 +22,7 @@ nicknames = []
 # Broadcasts message to all clients in clients list
 def broadcast(message):
     for client in clients:
-        client.send(message)
+        client.send(message.encode('ascii'))
 
 # Handles input from clients
 def handle(client):
@@ -35,22 +35,12 @@ def handle(client):
                 disconnect(client)
                 break
             else:
-                print(message)
-                ##broadcast(message)
+                print(f"{message}")
         except:
             disconnect(client)
             break
 
-        action = input("\nServer: ")
-
-        try:
-            client.send(action.encode('ascii'))
-        except:
-            disconnect(client)
-            break
-
-
-
+# Receiving new clients
 def receive():
     while True:
         if len(clients) == 0:
@@ -60,7 +50,7 @@ def receive():
         client, address = server.accept()
         print(f"Connected with {str(address)}")
 
-        # Asks for nickname (TEMPORARY)
+        # Asks for nickname
         client.send('NICK'.encode('ascii'))
         nickname = client.recv(1024).decode('ascii')
 
@@ -68,27 +58,22 @@ def receive():
         nicknames.append(nickname)
         clients.append(client)
 
-        action = input("\nServer: ")
+        # Prints information to console for logging
+        print(f"{nickname} joined the chat!")
+        broadcast(f"NEWNICKI:{nickname}")
 
-        # If client disconnects mid-input interrupt, server prints that to the console and moves on
-        try:
-            # Sends the action sentence to the client
-            client.send(f'{action}'.encode('ascii'))
-            ##client.send('Connected to the server'.encode('ascii'))
+        # Starts a thread for each  client, so they can run in parallel
+        thread = threading.Thread(target=handle, args=(client,))
+        thread.start()
 
-            # Prints information to console for logging
-            print(f"\nNickname of the client is '{nickname}'")
-
-            # Starts thread in function handle()
-            thread = threading.Thread(target=handle, args=(client,))
-            thread.start()
-
-        except:
-            #Prints error message to console
-            print(f"Client '{nickname}' has disconnected")
-
-            # Removes client information from lists and such
-            disconnect(client)
+# Sending new messages for all clients
+def actions():
+    while True:
+        global action
+        # Gathering the action the server is going to send to the clients
+        action = input().lower()
+        broadcast(action)
+        print("")
 
 # Handling disconnecting clients
 def disconnect(client):
@@ -97,12 +82,13 @@ def disconnect(client):
     clients.remove(client)
     client.close()
 
-    broadcast(f'{nickname} left the chat'.encode('ascii'))
-    print(f"'{nickname}' has disconnected!")
+    ##broadcast(f'{nickname} left the chat'.encode('ascii'))
+    print(f"\n'{nickname}' has disconnected!")
     nicknames.remove(nickname)
 
-    print("\nServer is listening...")
+# Starting a thread for taking input
+actionsThread = threading.Thread(target=actions)
+actionsThread.start()
 
-
-#print("Server is listening...")
+# Receiving new clients
 receive()

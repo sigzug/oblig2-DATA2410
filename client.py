@@ -41,7 +41,6 @@ def chuck(input, alt_action=None):
 # Data for configuring socket
 ip = '127.0.0.1'
 port = 8888
-bot = ''
 
 # Accepted verbs for response from bots
 verbs = ["sing", "talk", "kill", "fight", "kiss", "dream", "grown"]
@@ -58,53 +57,66 @@ def connect():
     client.connect((ip, port))
 
 def receive():
+    global action, bot
 
     # Boolean for tracking if nickname has been asked or not
-    global action
     counter = False
 
     while True:
-        if counter == True:
-            print("\nWaiting for message from server...")
+        # If server has already asked for nickname
+        #if counter == True:
+        #    print("\nWaiting for message from server...")
 
         try:
             # Collection message from server
             message = client.recv(1024).decode('ascii')
 
-            # If server asks for name (TEMPORARY)
+            # Looking for verbs in message from server
+            vyes = 0
+            vno = 0
+            newnick = False
+            for v in verbs:
+                if v in message:
+                    vyes = vyes + 1
+                    action = v
+                # I use this loop to also check if the server is broadcasting a nickname
+                elif 'NEWNICKI' in message:
+                    newnick = True
+                else:
+                    vno = vno + 1
+
+            # String for seeing name on server
+            upBot = str(bot).upper()
+
+            # If server asks for nickname
             if message == 'NICK':
-                client.send('bots'.encode('ascii'))
+                client.send(bot.encode('ascii'))
                 counter = True
-            elif message == "":
-                print("\nMessage from server was empty!")
+            # If the server has sent a nickname
+            elif newnick is True:
+                nick = message.replace("NEWNICKI:","")
+                nick = nick.upper()
+                print(f"\n{nick} joined the chat!")
+            # If the server has sent an empty or no verbs that match
+            elif message == "" or vyes == 0:
+                print("\nMessage from server was empty or had no verb!")
+                client.send(f"{upBot}: No verb dude!".encode('ascii'))
             else:
                 print(f"\nMessage from server: {message}")
 
-                # Looking for verb in message input
-                vyes = 0
-                vno = 0
-                for v in verbs:
-                    if v in message:
-                        vyes = vyes + 1
-                        action = v
-                    else:
-                        vno = vno + 1
-
-                # If no verbs that match, disconnect and restart shell
-                if vyes == 0:
-                    print("No verbs that match. Restarting!")
-                    client.send("exit".encode('ascii'))
-                    os.system('python client.py')
-                    break
-
                 # Bot responses to verb
-                aliceV = alice(action)
-                bobV = bob(action)
-                doraV, doraAction = dora(action)
-                chuckV = chuck(action, doraAction)
+                match bot:
+                    case 'alice':
+                        response = alice(action)
+                    case 'bob':
+                        response = bob(action)
+                    case 'dora':
+                        response, doraAction = dora(action)
+                    case 'chuck':
+                        response = chuck(action, )
 
                 # Making output string from responses
-                output = f'Alice: {aliceV}\nBob: {bobV}\nDora: {doraV}\nChuck: {chuckV}'
+                output = f'{upBot}: {response}'
 
                 # Sending message to server
                 write(output)
@@ -125,14 +137,15 @@ def write(input):
 
 ################################### Program runs from here ######################################
 
+# Input response for name of bot (MAYBE TEMPORARY)
+# Might replace for a list instead
+bot = input("Name of bot: ").lower()
+
 # Connecting to the server
 connect()
 
 # Threading threads
 receiveThread = threading.Thread(target=receive)
 receiveThread.start()
-##writeThread = threading.Thread(target=write)
-##writeThread.start()
-
 
 
