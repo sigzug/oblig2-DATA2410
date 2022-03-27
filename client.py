@@ -2,6 +2,7 @@ import os
 import random
 import socket
 import threading
+import sys
 
 
 # Example bots -----------------------------------------
@@ -24,14 +25,14 @@ def dora(input, alt_action=None):
 
 
 def chuck(input, alt_action=None):
-    action = alt_action + "ing"
+    #action = alt_action + "ing"
     bad_things = ["fighting", "bickering", "yelling", "complaining"]
     good_things = ["singing", "hugging", "playing", "working"]
 
     if action in bad_things:
-        return "YES! Time for some {}!!".format(action)
+        return "YES! Time for some {}!!".format(input)
     elif action in good_things:
-        return "{} is so boooriiiing! I'm not doing that".format(action)
+        return "{} is so boooriiiing! I'm not doing that".format(input)
     return "I don't care!"
 
 
@@ -47,6 +48,8 @@ verbs = ["sing", "talk", "kill", "fight", "kiss", "dream", "grown"]
 action = ''
 
 # Main functions -------------------------------------------
+
+# Connects to server and creating client information
 def connect():
     global client
 
@@ -56,16 +59,17 @@ def connect():
     # Connecting to server
     client.connect((ip, port))
 
+# Handles messages from server
 def receive():
-    global action, bot
+    global action, bot, upBot
 
-    # Boolean for tracking if nickname has been asked or not
-    counter = False
+    # Boolean for tracking if nickname has been asked for or not
+    ##counter = False
 
     while True:
         # If server has already asked for nickname
         #if counter == True:
-        #    print("\nWaiting for message from server...")
+        #   print("\nWaiting for message from server...")
 
         try:
             # Collection message from server
@@ -74,34 +78,42 @@ def receive():
             # Looking for verbs in message from server
             vyes = 0
             vno = 0
-            newnick = False
             for v in verbs:
                 if v in message:
                     vyes = vyes + 1
                     action = v
-                # I use this loop to also check if the server is broadcasting a nickname
-                elif 'NEWNICKI' in message:
-                    newnick = True
                 else:
                     vno = vno + 1
 
-            # String for seeing name on server
+            # String for seeing name strongly on server
             upBot = str(bot).upper()
 
             # If server asks for nickname
             if message == 'NICK':
                 client.send(bot.encode('ascii'))
-                counter = True
+                ##counter = True
             # If the server has sent a nickname
-            elif newnick is True:
-                nick = message.replace("NEWNICKI:","")
-                nick = nick.upper()
-                print(f"\n{nick} joined the chat!")
+            elif ':NEWNICKI' in message:
+                message = message.replace(":NEWNICKI","")
+                print(f"\n{message.upper()} joined the chat!")
+            # If the user has sent a message that the server dont't want a response from bots
+            elif ':HUMWRITE' in message:
+                message = message.replace(':HUMWRITE', "")
+                print(message)
+            # If server sends message about new connected user
+            elif ':CONNECT' in message:
+                message = message.replace(':CONNECT', "")
+                print(message)
+            # If server sends message about new disconnected user
+            elif ':DISCO' in message:
+                message = message.replace(':DISCO', "")
+                print(message)
             # If the server has sent an empty or no verbs that match
-            elif message == "" or vyes == 0:
-                print("\nMessage from server was empty or had no verb!")
+            elif vyes == 0:
+                print("\nMessage from server had no matching verb!")
                 client.send(f"{upBot}: No verb dude!".encode('ascii'))
             else:
+                # For testing######
                 print(f"\nMessage from server: {message}")
 
                 # Bot responses to verb
@@ -115,22 +127,41 @@ def receive():
                     case 'chuck':
                         response = chuck(action, )
 
-                # Making output string from responses
-                output = f'{upBot}: {response}'
-
                 # Sending message to server
-                write(output)
+                send(response)
         except:
             print("Error: Couldn't process message from server!")
             client.close()
             break
 
 # Sending message to server
-def write(input):
-    global bot
-    message = f'{input}'
-    print(f"\nSending: \n{message}")
+def send(response):
+
+    # Making output string from responses
+    message = f'{upBot}: {response}'
+
+    # For testing#######
+    print(f"\n'Sending: {message}'")
+
+    # Sending message to server
     client.send(message.encode('ascii'))
+
+# Takes input from client
+# This is so the program can function as a normal chat room if needed,
+# but more importantly for easily closing the program without crashing
+def write():
+    while True:
+        message = input("").lower()
+        if message == "exit":
+            disconnect()
+        else:
+            send(message+":HUMWRITE")
+
+# Disconnects from server
+def disconnect():
+    client.send("exit".encode('ascii'))
+    client.close()
+    sys.exit()
 
 # ----------------------------------------------------------------------
 
@@ -139,7 +170,7 @@ def write(input):
 
 # Input response for name of bot (MAYBE TEMPORARY)
 # Might replace for a list instead
-bot = input("Name of bot: ").lower()
+bot = input("Name of user: ").lower()
 
 # Connecting to the server
 connect()
@@ -147,5 +178,8 @@ connect()
 # Threading threads
 receiveThread = threading.Thread(target=receive)
 receiveThread.start()
+
+writeThread = threading.Thread(target=write)
+writeThread.start()
 
 
