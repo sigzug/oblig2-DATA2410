@@ -1,53 +1,14 @@
-import os
 import random
 import socket
 import threading
 import sys
+# List of verbs in another file
+import time
 
+import verbs
+# Bots in another file
+import bots
 
-# Example bots -----------------------------------------
-def alice(input, alt_action=None):
-    return f"I think {input + 'ing'} sounds great!"
-
-
-def bob(input, alt_action=None):
-    if alt_action is None:
-        return "Not sure about {}. Don't I get a choice?".format(input + "ing")
-    else:
-        return "Sure, both {} and {} seems ok to me.".format(input, alt_action + "ing")
-
-
-def dora(input, alt_action=None):
-    alternatives = ["code", "sing", "sleep", "fight"]
-    alt_action = random.choice(alternatives)
-    out = "Yea, {} is an option. Or we could do some {}.".format(input, alt_action + "ing")
-    return out, alt_action
-
-
-def chuck(input, alt_action=None):
-    #action = alt_action + "ing"
-    bad_things = ["fighting", "bickering", "yelling", "complaining"]
-    good_things = ["singing", "hugging", "playing", "working"]
-
-    if action in bad_things:
-        return "YES! Time for some {}!!".format(input)
-    elif action in good_things:
-        return "{} is so boooriiiing! I'm not doing that".format(input)
-    return "I don't care!"
-
-
-# -------------------------------------------------------------
-
-
-# Data for configuring socket
-ip = '127.0.0.1'
-port = 8888
-
-# Accepted verbs for response from bots
-verbs = ["sing", "talk", "kill", "fight", "kiss", "dream", "grown"]
-action = ''
-
-# Main functions -------------------------------------------
 
 # Connects to server and creating client information
 def connect():
@@ -59,47 +20,37 @@ def connect():
     # Connecting to server
     client.connect((ip, port))
 
-# Handles messages from server
-def receive():
-    global action, bot, upBot
-
-    # Boolean for tracking if nickname has been asked for or not
-    ##counter = False
-
+# Bot function for when a bot is running
+def bot():
+    global action, upBot, client
+    counter = 0
+    response = ""
     while True:
-        # If server has already asked for nickname
-        #if counter == True:
-        #   print("\nWaiting for message from server...")
-
+        # Looking for verbs in message from server
         try:
-            # Collection message from server
-            message = client.recv(1024).decode('ascii')
+            # Gathering message from server
+            message = client.recv(1024).decode('UTF-8')
 
-            # Looking for verbs in message from server
+            # String for seeing name strongly on server
+            upBot = str(user).upper()
+
+            # Looking for verb in message from server
             vyes = 0
             vno = 0
-            for v in verbs:
+            for v in verbs.verbs:
                 if v in message:
                     vyes = vyes + 1
                     action = v
                 else:
                     vno = vno + 1
 
-            # String for seeing name strongly on server
-            upBot = str(bot).upper()
-
             # If server asks for nickname
             if message == 'NICK':
-                client.send(bot.encode('ascii'))
-                ##counter = True
+                client.send(user.encode('UTF-8'))
             # If the server has sent a nickname
             elif ':NEWNICKI' in message:
                 message = message.replace(":NEWNICKI","")
                 print(f"\n{message.upper()} joined the chat!")
-            # If the user has sent a message that the server dont't want a response from bots
-            elif ':HUMWRITE' in message:
-                message = message.replace(':HUMWRITE', "")
-                print(message)
             # If server sends message about new connected user
             elif ':CONNECT' in message:
                 message = message.replace(':CONNECT', "")
@@ -108,27 +59,90 @@ def receive():
             elif ':DISCO' in message:
                 message = message.replace(':DISCO', "")
                 print(message)
+            # If a bot has sent something this bot will just ignore
+            elif ':BOT' in message:
+                ###NOTHING
+                x = 0
+            # If server has sent 3 empty messages, the client disconnects
+            elif counter == 3:
+                client.close()
+                print("Lost server, RIP")
+                sys.exit()
+            # If the message from server is empty, the client starts counting times it has been empty
+            elif message == "":
+                counter = counter + 1
+                print(f"Waiting for server, {counter}")
+                time.sleep(1)
             # If the server has sent an empty or no verbs that match
             elif vyes == 0:
                 print("\nMessage from server had no matching verb!")
-                client.send(f"{upBot}: No verb dude!".encode('ascii'))
+                client.send(f"{upBot}: No verb dude!:BOT".encode('utf-8'))
             else:
-                # For testing######
+                # For testing##
                 print(f"\nMessage from server: {message}")
 
                 # Bot responses to verb
-                match bot:
+                match user:
                     case 'alice':
-                        response = alice(action)
+                        response = bots.alice(action)
                     case 'bob':
-                        response = bob(action)
+                        response = bots.bob(action)
                     case 'dora':
-                        response, doraAction = dora(action)
+                        response, alt = bots.dora(action)
                     case 'chuck':
-                        response = chuck(action, )
+                        response = bots.chuck(action,)
+                    case 'billy':
+                        response, alt = bots.billy(action)
+                    case 'bobby':
+                        response = bots.bobby(action,)
 
                 # Sending message to server
-                send(response)
+                send(response + ":BOT")
+        except:
+            print("Could not receive message from server!")
+            client.close()
+            break
+
+
+# Handles messages from server
+def receive():
+    counter = 0
+    while True:
+        try:
+            # Collection message from server
+            message = client.recv(1024).decode('utf-8')
+
+            # If server asks for nickname
+            if message == 'NICK':
+                client.send(user.encode('utf-8'))
+            # If the server has sent a nickname
+            elif ':NEWNICKI' in message:
+                message = message.replace(":NEWNICKI","")
+                print(f"\n{message.upper()} joined the chat!")
+            # If server sends message about new connected user
+            elif ':CONNECT' in message:
+                message = message.replace(':CONNECT', "")
+                print("\n"+message)
+            # If server sends message about new disconnected user
+            elif ':DISCO' in message:
+                message = message.replace(':DISCO', "")
+                print(message)
+            # If a bot send a message is will replace the word and make it standard
+            elif ':BOT' in message:
+                message = message.replace(":BOT", "")
+                print(message)
+            # If the server has sent 3 empty messages, it will disconnect
+            elif counter == 3:
+                client.close()
+                print("Lost server, RIP")
+                break
+            # If server sends empty message, it will count each time it sends empty
+            elif message == "":
+                time.sleep(1)
+                counter = counter + 1
+                print(f"Waiting for server, {counter}")
+            else:
+                print(message)
         except:
             print("Error: Couldn't process message from server!")
             client.close()
@@ -136,15 +150,13 @@ def receive():
 
 # Sending message to server
 def send(response):
-
     # Making output string from responses
-    message = f'{upBot}: {response}'
-
-    # For testing#######
-    print(f"\n'Sending: {message}'")
+    message = f'{user.upper()}: {response}'
 
     # Sending message to server
-    client.send(message.encode('ascii'))
+    client.send(message.encode('utf-8'))
+
+    print(f"YOU: {response}")
 
 # Takes input from client
 # This is so the program can function as a normal chat room if needed,
@@ -155,11 +167,15 @@ def write():
         if message == "exit":
             disconnect()
         else:
-            send(message+":HUMWRITE")
+            try:
+                send(message)
+            except:
+                client.close()
+                break
 
 # Disconnects from server
 def disconnect():
-    client.send("exit".encode('ascii'))
+    client.send("exit".encode('utf-8'))
     client.close()
     sys.exit()
 
@@ -168,16 +184,33 @@ def disconnect():
 
 ################################### Program runs from here ######################################
 
+# Data for configuring socket
+ip = '127.0.0.1'
+port = 8888
+
+action = None
+
+upBot = None
+
+isBot = False
+
 # Input response for name of bot (MAYBE TEMPORARY)
 # Might replace for a list instead
-bot = input("Name of user: ").lower()
+user = input("Name of user: ").lower()
+
+if user in bots.bots:
+    isBot = True
 
 # Connecting to the server
 connect()
 
-# Threading threads
-receiveThread = threading.Thread(target=receive)
-receiveThread.start()
+if isBot:
+    botThread = threading.Thread(target=bot)
+    botThread.start()
+else:
+    # Threading threads
+    receiveThread = threading.Thread(target=receive)
+    receiveThread.start()
 
 writeThread = threading.Thread(target=write)
 writeThread.start()
