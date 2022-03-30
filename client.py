@@ -1,7 +1,9 @@
-import random
+import os
 import socket
 import threading
 import sys
+import random
+
 # List of verbs in another file
 import time
 
@@ -20,11 +22,17 @@ def connect():
     # Connecting to server
     client.connect((ip, port))
 
+
 # Bot function for when a bot is running
-def bot():
+def bot(bPrint=True):
     global action, upBot, client
     counter = 0
     response = ""
+
+    # For turning off prints if specified
+    if not bPrint:
+        sys.stdout = open(os.devnull, 'w')
+
     while True:
         # Looking for verbs in message from server
         try:
@@ -76,25 +84,21 @@ def bot():
             # If the server has sent an empty or no verbs that match
             elif vyes == 0:
                 print("\nMessage from server had no matching verb!")
-                client.send(f"{upBot}: No verb dude!:BOT".encode('utf-8'))
+                send(f"No verb dude!:BOT")
             else:
-                # For testing##
+                # For testing
                 print(f"\nMessage from server: {message}")
 
                 # Bot responses to verb
                 match user:
-                    case 'alice':
-                        response = bots.alice(action)
-                    case 'bob':
-                        response = bots.bob(action)
-                    case 'dora':
-                        response, alt = bots.dora(action)
-                    case 'chuck':
-                        response = bots.chuck(action,)
                     case 'billy':
-                        response, alt = bots.billy(action)
+                        response = bots.billy(action)
                     case 'bobby':
-                        response = bots.bobby(action,)
+                        response = bots.bobby(action)
+                    case 'sarah':
+                        response = bots.sarah(action)
+                    case 'chris':
+                        response = bots.chris(action)
 
                 # Sending message to server
                 send(response + ":BOT")
@@ -150,20 +154,27 @@ def receive():
 
 # Sending message to server
 def send(response):
+    # If bots are sending messages, they will wait a random time between 0.1 and 1 second
+    # This is to prevent print errors and to make the bots feel more human
+    if isBot:
+        time.sleep(random.randint(1, 10) / 10)
+
     # Making output string from responses
     message = f'{user.upper()}: {response}'
 
     # Sending message to server
     client.send(message.encode('utf-8'))
 
+    # Prints message for user
     print(f"YOU: {response}")
 
 # Takes input from client
-# This is so the program can function as a normal chat room if needed,
-# but more importantly for easily closing the program without crashing
+# This is so the program can function as a normal chat room as well as have talking bots
 def write():
     while True:
         message = input("").lower()
+
+        # Exits shell if user specifies, else sends the message to server
         if message == "exit":
             disconnect()
         else:
@@ -179,8 +190,8 @@ def disconnect():
     client.close()
     sys.exit()
 
-# ----------------------------------------------------------------------
 
+# ----------------------------------------------------------------------
 
 ################################### Program runs from here ######################################
 
@@ -188,30 +199,37 @@ def disconnect():
 ip = '127.0.0.1'
 port = 8888
 
+# Variables used in functions that needs to be global
 action = None
 
 upBot = None
-
 isBot = False
 
-# Input response for name of bot (MAYBE TEMPORARY)
-# Might replace for a list instead
-user = input("Name of user: ").lower()
-
-if user in bots.bots:
-    isBot = True
+# Input response for name of user
+# If the client is started with a name, it is in bot mode and will launch a bot instead
+try:
+    arg = sys.argv[1]
+    if arg in bots.bots:
+        user = arg
+        isBot = True
+except:
+    user = input("Name of user: ").lower()
 
 # Connecting to the server
 connect()
 
+# If client is marked as bot, starts thread in bot function
+# If human, starts the normal client receive function
 if isBot:
-    botThread = threading.Thread(target=bot)
+    botThread = threading.Thread(target=bot, args=(False,))
     botThread.start()
 else:
     # Threading threads
     receiveThread = threading.Thread(target=receive)
     receiveThread.start()
 
+# Starts write function in thread which is for typing.
+# If bot, the write function can be used to close the thread
 writeThread = threading.Thread(target=write)
 writeThread.start()
 

@@ -1,12 +1,17 @@
+import subprocess
+import sys
+import os
 import time
 import threading
 import socket
-import sys
 
 # Broadcasts message to all clients in clients list
+import bots
+
+
 def broadcast(message):
-    for client in clients:
-        send(message, client)
+    for c in clients:
+        send(message, c)
 
 
 # Sends message to all cleints except the one who sent the message
@@ -34,13 +39,14 @@ def handle(client):
             if message == "exit":
                 disconnect(client)
                 break
-            elif counter == 3:
-                disconnect(client)
-                break
             elif message == '':
                 counter = counter + 1
-                print(f"Waiting for user, {counter}")
-                time.sleep(1)
+                if counter == 3:
+                    client.close()
+                    break
+                else:
+                    print(f"Waiting for user, {counter}")
+                    time.sleep(1)
             else:
                 sendRest(message, client)
                 print(message)
@@ -52,31 +58,34 @@ def handle(client):
 # Receiving new clients
 def receive():
     while True:
-
         # Shows something on screen if there's no one connected
         if len(clients) == 0:
             print("\nServer is listening...")
 
-        # Sets up client variable and address with accept()
-        client, address = server.accept()
-        print(f"Connected with {str(address)}")
+        try:
+            # Sets up client variable and address with accept()
+            client, address = server.accept()
+            print(f"Connected with {str(address)}")
 
-        # Asks for nickname
-        send('NICK', client)
-        nickname = client.recv(1024).decode('utf-8')
+            # Asks for nickname
+            send('NICK', client)
+            nickname = client.recv(1024).decode('utf-8')
 
-        # Puts name and client information in array
-        nicknames.append(nickname)
-        clients.append(client)
+            # Puts name and client information in array
+            nicknames.append(nickname)
+            clients.append(client)
 
-        # Prints information to console for logging
-        print(f"{nickname} joined the chat!")
-        send("Connected to server!:CONNECT", client)
-        sendRest(nickname + ':NEWNICKI', client)
+            # Prints information to console for logging
+            print(f"{nickname} joined the chat!")
+            send("Connected to server!:CONNECT", client)
+            sendRest(nickname + ':NEWNICKI', client)
 
-        # Starts a thread for each  client, so they can run in parallel
-        thread = threading.Thread(target=handle, args=(client,))
-        thread.start()
+            # Starts a thread for each  client, so they can run in parallel
+            thread = threading.Thread(target=handle, args=(client,))
+            thread.start()
+        except:
+            quit()
+            break
 
 
 # Sending new messages for all clients
@@ -86,8 +95,13 @@ def actions():
 
         # Gathering the action the server is going to send to the clients
         action = input().lower()
-        broadcast(action)
-        print("")
+
+        if action == 'exit':
+            server.close()
+            quit()
+        else:
+            broadcast(action)
+            print("")
 
 
 # Handling disconnecting clients
@@ -107,14 +121,15 @@ def disconnect(client):
 try:
     # If the first argument is "-h", help message is printed
     if sys.argv[1] == str("-h"):
-        print("Usage: python3 server.py [PORT]")
+        print("Usage: python3 server.py [PORT] [BOTS -b]")
         print("IMPORTANT: Only supports python 3.10 and higher")
         print()
     else:
         # Server network information
         # Gets port from argument in console
         host = '127.0.0.1'
-        port = 8888 #int(sys.argv[1])
+        port = int(sys.argv[1])
+        client = ''
 
         # Setting up socket and binds to ip and port. Sets the socket in listen()
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -129,8 +144,14 @@ try:
         actionsThread = threading.Thread(target=actions)
         actionsThread.start()
 
+        # Starting all bots as clients if user has specified
+        if sys.argv[2] == '-b':
+            for b in bots.bots:
+                subprocess.Popen(["python3", ".\client.py", f"{b}"])
+
         # Receiving new clients
         receive()
-        # If no arguments, send wrong syntax message
+
+# If no arguments, send wrong syntax message
 except:
     print("\nWrong syntax. Type -h for help!\n")

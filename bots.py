@@ -1,46 +1,44 @@
 import random
 import verbs
 
-bots = ["alice", "bob", "dora", "chuck", "bobby", "billy"]
+bots = ["bobby", "billy", "sarah", "chris"]
 
-
-# Example bots -----------------------------------------
-def alice(input, alt_action=None):
-    return f"I think {input + 'ing'} sounds great!"
-
-
-def bob(input, alt_action=None):
-    if alt_action is None:
-        return "Not sure about {}. Don't I get a choice?".format(input + "ing")
-    else:
-        return "Sure, both {} and {} seems ok to me.".format(input, alt_action + "ing")
-
-
-def dora(input, alt_action=None):
-    alternatives = ["code", "sing", "sleep", "fight"]
-    alt_action = random.choice(alternatives)
-    out = "Yea, {} is an option. Or we could do some {}.".format(input, alt_action + "ing")
-    return out, alt_action
-
-
-def chuck(a, b):
-    if b in verbs.bad_verbs:
-        return "YES! Time for some {}!!".format(b)
-    elif b in verbs.good_verbs:
-        return "{} is so boooriiiing! I'm not doing that".format(b)
-    return "I don't care!"
-
-
-# -------------------------------------------------------------
-
-
-def billy(a, b=None):
+def billy(a):
+    a_out = verbs.ending(a)
     alt = random.choice(verbs.verbs)
-    return f"{a + 'ing'} sounds super duper cool, boy! Maybe even {alt + 'ing'} would work!", alt
+    alt_out = verbs.ending(alt)
+    return f"{a_out} sounds super duper cool, boy! Maybe even {alt_out} would work!", alt
 
 
-def bobby(a, b=None):
+def bobby(a):
+    a_out = verbs.ending(a)
     if a in verbs.bad_verbs:
-        return f"Billy you are a god damn weirdo, man! {a + 'ing'} is a muuuch safer alternative!"
+        return f"Billy you are a god damn weirdo, man! {a_out} is a muuuch safer alternative!"
     else:
-        return f"Done diddly doo billy. That sound super duper nice!"
+        return f"Done diddly doo. {a_out} sound super duper nice!"
+
+def sarah(a):
+    a_out = verbs.ending(a)
+    sarah_verbs = ["cook", "read", "write", "relax", "kiss"]
+    if a in sarah_verbs:
+        return f"Yes! {a_out} sounds, like, suuuper nice to do! I like you or whatever"
+    else:
+        return f"I'm like not really into {a_out}. Can't you be more fun?"
+
+def chris(a):
+    a_out = verbs.ending(a)
+    if a == 'play':
+        l = [1,2,3,4]
+        r = random.choice(l)
+        match r:
+            case 1:
+                return f"Dude yes! I would really like to play some football! " \
+                       f"Did you know I won a medal for best runner?"
+            case 2:
+                return f"I would love to play, man! Jesus, I haven't played hockey in ages. You in?"
+            case 3:
+                return f"Yees finally! You know, I'm somewhat of a boxer. Want to beat each other faces, man?"
+            case 4:
+                return f"I can't wait! What do you want to play?"
+    else:
+        return f"Nah, man. I don't do {a_out}, dude. Let's leave it."
