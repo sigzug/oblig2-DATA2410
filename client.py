@@ -7,7 +7,6 @@ import random
 # List of verbs in another file
 import time
 
-import verbs
 # Bots in another file
 import bots
 
@@ -24,14 +23,14 @@ def connect():
 
 
 # Bot function for when a bot is running
-def bot(bPrint=True):
-    global action, upBot, client
+def bot(bprint=True):
+    global upBot, client, user
     counter = 0
-    response = ""
 
     # For turning off prints if specified
-    if not bPrint:
+    if not bprint:
         sys.stdout = open(os.devnull, 'w')
+        sys.stderr = open(os.devnull, 'w')
 
     while True:
         # Looking for verbs in message from server
@@ -42,22 +41,12 @@ def bot(bPrint=True):
             # String for seeing name strongly on server
             upBot = str(user).upper()
 
-            # Looking for verb in message from server
-            vyes = 0
-            vno = 0
-            for v in verbs.verbs:
-                if v in message:
-                    vyes = vyes + 1
-                    action = v
-                else:
-                    vno = vno + 1
-
             # If server asks for nickname
             if message == 'NICK':
                 client.send(user.encode('UTF-8'))
             # If the server has sent a nickname
             elif ':NEWNICKI' in message:
-                message = message.replace(":NEWNICKI","")
+                message = message.replace(":NEWNICKI", "")
                 print(f"\n{message.upper()} joined the chat!")
             # If server sends message about new connected user
             elif ':CONNECT' in message:
@@ -69,36 +58,24 @@ def bot(bPrint=True):
                 print(message)
             # If a bot has sent something this bot will just ignore
             elif ':BOT' in message:
-                ###NOTHING
-                x = 0
-            # If server has sent 3 empty messages, the client disconnects
-            elif counter == 3:
-                client.close()
-                print("Lost server, RIP")
-                sys.exit()
+                time.sleep(0.1)
             # If the message from server is empty, the client starts counting times it has been empty
             elif message == "":
                 counter = counter + 1
                 print(f"Waiting for server, {counter}")
                 time.sleep(1)
-            # If the server has sent an empty or no verbs that match
-            elif vyes == 0:
-                print("\nMessage from server had no matching verb!")
-                send(f"No verb dude!:BOT")
+
+                # If server has sent 3 empty messages, the client disconnects
+                if counter == 3:
+                    client.close()
+                    print("Lost server, RIP")
+                    sys.exit()
+
             else:
                 # For testing
                 print(f"\nMessage from server: {message}")
 
-                # Bot responses to verb
-                match user:
-                    case 'billy':
-                        response = bots.billy(action)
-                    case 'bobby':
-                        response = bots.bobby(action)
-                    case 'sarah':
-                        response = bots.sarah(action)
-                    case 'chris':
-                        response = bots.chris(action)
+                response = run_bots(message)
 
                 # Sending message to server
                 send(response + ":BOT")
@@ -106,6 +83,20 @@ def bot(bPrint=True):
             print("Could not receive message from server!")
             client.close()
             break
+
+
+def run_bots(action):
+    global user
+    # Bot responses to verb
+    match user:
+        case 'billy':
+            return bots.billy(action)
+        case 'bobby':
+            return bots.bobby(action)
+        case 'sarah':
+            return bots.sarah(action)
+        case 'chris':
+            return bots.chris(action)
 
 
 # Handles messages from server
@@ -121,7 +112,7 @@ def receive():
                 client.send(user.encode('utf-8'))
             # If the server has sent a nickname
             elif ':NEWNICKI' in message:
-                message = message.replace(":NEWNICKI","")
+                message = message.replace(":NEWNICKI", "")
                 print(f"\n{message.upper()} joined the chat!")
             # If server sends message about new connected user
             elif ':CONNECT' in message:
@@ -136,21 +127,23 @@ def receive():
                 message = message.replace(":BOT", "")
                 print(message)
             # If the server has sent 3 empty messages, it will disconnect
-            elif counter == 3:
-                client.close()
-                print("Lost server, RIP")
-                break
+
             # If server sends empty message, it will count each time it sends empty
             elif message == "":
-                time.sleep(1)
                 counter = counter + 1
-                print(f"Waiting for server, {counter}")
+                if counter == 4:
+                    client.close()
+                    break
+                else:
+                    print(f"Waiting for server, {counter}")
+                    time.sleep(1)
             else:
                 print(message)
         except:
             print("Error: Couldn't process message from server!")
             client.close()
             break
+
 
 # Sending message to server
 def send(response):
@@ -168,6 +161,7 @@ def send(response):
     # Prints message for user
     print(f"YOU: {response}")
 
+
 # Takes input from client
 # This is so the program can function as a normal chat room as well as have talking bots
 def write():
@@ -183,6 +177,7 @@ def write():
             except:
                 client.close()
                 break
+
 
 # Disconnects from server
 def disconnect():
@@ -200,10 +195,10 @@ ip = '127.0.0.1'
 port = 8888
 
 # Variables used in functions that needs to be global
-action = None
-
+client = ""
 upBot = None
 isBot = False
+verbose = False
 
 # Input response for name of user
 # If the client is started with a name, it is in bot mode and will launch a bot instead
@@ -215,22 +210,30 @@ try:
 except:
     user = input("Name of user: ").lower()
 
+# If user has specified verbose bot, sets boolean
+try:
+    arg = sys.argv[2]
+    if arg == "-v":
+        verbose = True
+except:
+    verbose = False
+
 # Connecting to the server
 connect()
 
-# If client is marked as bot, starts thread in bot function
+# If client is marked as bot, starts thread in bot function. If verbose is True --> turns on prints
 # If human, starts the normal client receive function
 if isBot:
-    botThread = threading.Thread(target=bot, args=(False,))
+    botThread = threading.Thread(target=bot, args=(verbose,))
     botThread.start()
 else:
     # Threading threads
     receiveThread = threading.Thread(target=receive)
     receiveThread.start()
 
-# Starts write function in thread which is for typing.
-# If bot, the write function can be used to close the thread
-writeThread = threading.Thread(target=write)
-writeThread.start()
+    # Starts write function in thread which is for typing.
+    # If bot, the write function can be used to close the thread
+    writeThread = threading.Thread(target=write)
+    writeThread.start()
 
 

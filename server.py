@@ -1,62 +1,66 @@
 import subprocess
 import sys
-import os
 import time
 import threading
 import socket
-
-# Broadcasts message to all clients in clients list
 import bots
 
 
+# Broadcasts message to all clients in clients list
 def broadcast(message):
     for c in clients:
         send(message, c)
 
 
-# Sends message to all cleints except the one who sent the message
-def sendRest(message, client):
+# Sends message to all clients except the one who sent the message
+def send_rest(message, in_client):
     for c in clients:
-        if c == client:
-            ####Nothing is happening
+        if c == in_client:
+            # Nothing is happening
             z = 0
         else:
             send(message, c)
 
 
 # Function for encoding and sending message to a client
-def send(message, client):
-    client.send(message.encode('utf-8'))
+def send(message, c):
+    c.send(message.encode('utf-8'))
+
 
 # Handles input from clients
-def handle(client):
+def handle(in_client):
     counter = 0
     while True:
         # Picks up message from client
         try:
-            message = client.recv(1024).decode('utf-8')
+            message = in_client.recv(1024).decode('utf-8')
 
+            # If the user specifies exiting
             if message == "exit":
-                disconnect(client)
+                disconnect(in_client)
                 break
+            # If server lost connection to client, it will receive blank strings
             elif message == '':
                 counter = counter + 1
-                if counter == 3:
-                    client.close()
+                # Wait 3 seconds, if still no connection -> disconnect client
+                if counter == 4:
+                    disconnect(in_client)
                     break
                 else:
                     print(f"Waiting for user, {counter}")
                     time.sleep(1)
             else:
-                sendRest(message, client)
+                # Sending message to all other clients then its sender
+                send_rest(message, in_client)
                 print(message)
         except:
-            disconnect(client)
+            disconnect(in_client)
             break
 
 
 # Receiving new clients
 def receive():
+    global client
     while True:
         # Shows something on screen if there's no one connected
         if len(clients) == 0:
@@ -78,7 +82,7 @@ def receive():
             # Prints information to console for logging
             print(f"{nickname} joined the chat!")
             send("Connected to server!:CONNECT", client)
-            sendRest(nickname + ':NEWNICKI', client)
+            send_rest(nickname + ':NEWNICKI', client)
 
             # Starts a thread for each  client, so they can run in parallel
             thread = threading.Thread(target=handle, args=(client,))
@@ -91,25 +95,35 @@ def receive():
 # Sending new messages for all clients
 def actions():
     while True:
-        global action
+        global processes
 
         # Gathering the action the server is going to send to the clients
         action = input().lower()
 
+        # Closing server is server sends 'exit' command
         if action == 'exit':
             server.close()
+            try:
+                # Closes all subprocesses and server if there is any
+                for p in processes:
+                    p.kill()
+            except:
+                # Nothing is happening
+                x = 0
             quit()
+            sys.exit()
+        # Sends server message to all clients
         else:
             broadcast(action)
             print("")
 
 
 # Handling disconnecting clients
-def disconnect(client):
-    index = clients.index(client)
+def disconnect(in_client):
+    index = clients.index(in_client)
     nickname = nicknames[index]
-    client.close()
-    clients.remove(client)
+    in_client.close()
+    clients.remove(in_client)
 
     broadcast(f"\n{nickname.upper()} has left the chat!:DISCO")
     print(f"\n'{nickname}' has disconnected!")
@@ -121,7 +135,7 @@ def disconnect(client):
 try:
     # If the first argument is "-h", help message is printed
     if sys.argv[1] == str("-h"):
-        print("Usage: python3 server.py [PORT] [BOTS -b]")
+        print("Usage: python3 server.py [PORT] [OPTIONAL BOTS -b] [OPTIONAL VERBOSE BOTS -v]")
         print("IMPORTANT: Only supports python 3.10 and higher")
         print()
     else:
@@ -139,19 +153,44 @@ try:
         # Lists for clients and nicknames
         clients = []
         nicknames = []
+        processes = []
 
         # Starting a thread for taking input
         actionsThread = threading.Thread(target=actions)
         actionsThread.start()
 
-        # Starting all bots as clients if user has specified
-        if sys.argv[2] == '-b':
-            for b in bots.bots:
-                subprocess.Popen(["python3", ".\client.py", f"{b}"])
+        # If user specifies v for verbose bots, sets boolean
+        try:
+            try:
+                # If user wants all comments prints
+                if sys.argv[3] == "-v":
+                    verbose = True
+                else:
+                    verbose = False
+            except:
+                verbose = False
 
-        # Receiving new clients
-        receive()
 
+            # Starting all bots as clients if user has specified
+            if sys.argv[2] == '-b':
+                i = 0
+                for b in bots.bots:
+                    var = f"proc{i}"
+
+                    # Saving to list for closing later
+                    processes.append(var)
+
+                    # If user had specifies verbose bots
+                    if verbose:
+                        processes[i] = subprocess.Popen(["python3", ".\client.py", f"{b}", "-v"])
+                    else:
+                        processes[i] = subprocess.Popen(["python3", ".\client.py", f"{b}"])
+                    i = i + 1
+
+            receive()
+        except:
+            # Receiving new clients
+            receive()
 # If no arguments, send wrong syntax message
 except:
     print("\nWrong syntax. Type -h for help!\n")
