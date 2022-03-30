@@ -64,13 +64,11 @@ def bot(bprint=True):
                 counter = counter + 1
                 print(f"Waiting for server, {counter}")
                 time.sleep(1)
-
                 # If server has sent 3 empty messages, the client disconnects
                 if counter == 3:
                     client.close()
                     print("Lost server, RIP")
                     sys.exit()
-
             else:
                 # For testing
                 print(f"\nMessage from server: {message}")
@@ -126,11 +124,10 @@ def receive():
             elif ':BOT' in message:
                 message = message.replace(":BOT", "")
                 print(message)
-            # If the server has sent 3 empty messages, it will disconnect
-
             # If server sends empty message, it will count each time it sends empty
             elif message == "":
                 counter = counter + 1
+                # If the server has sent 3 empty messages, it will disconnect
                 if counter == 4:
                     client.close()
                     break

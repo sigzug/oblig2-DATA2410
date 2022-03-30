@@ -107,6 +107,7 @@ def actions():
                 # Closes all subprocesses and server if there is any
                 for p in processes:
                     p.kill()
+                    processes.remove(p)
             except:
                 # Nothing is happening
                 x = 0
@@ -161,16 +162,6 @@ try:
 
         # If user specifies v for verbose bots, sets boolean
         try:
-            try:
-                # If user wants all comments prints
-                if sys.argv[4] == "-v":
-                    verbose = True
-                else:
-                    verbose = False
-            except:
-                verbose = False
-
-
             # Starting all bots as clients if user has specified
             if sys.argv[3] == '-b':
                 i = 0
@@ -179,12 +170,14 @@ try:
 
                     # Saving to list for closing later
                     processes.append(var)
+                    try:
+                        # If user had specifies verbose bots
+                        if sys.argv[4] == "-v":
+                            processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", f"{int(port)}", f"{b}", "-v"])
+                    except:
+                        # Else start client process without verbose
+                        processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", f"{int(port)}", f"{b}"])
 
-                    # If user had specifies verbose bots
-                    if verbose:
-                        processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", f"{int(port)}", f"{b}", "-v"])
-                    else:
-                        processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", int(port), f"{b}"])
                     i = i + 1
 
             receive()

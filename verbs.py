@@ -37,5 +37,3 @@ good_verbs = ["achieve", "ask", "arrange", "bathe", "bake", "build", "carry", "c
 verbs = bad_verbs + good_verbs
 
 helloL = ["hello", "hi", "hey", "hei"]
-
-hruL = ["how are you", "are you ok", "are you fine"]
