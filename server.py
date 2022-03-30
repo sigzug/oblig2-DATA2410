@@ -135,14 +135,14 @@ def disconnect(in_client):
 try:
     # If the first argument is "-h", help message is printed
     if sys.argv[1] == str("-h"):
-        print("Usage: python3 server.py [PORT] [OPTIONAL BOTS -b] [OPTIONAL VERBOSE BOTS -v]")
+        print("Usage: python3 server.py [IP ADDRESS] [PORT] [OPTIONAL BOTS -b] [OPTIONAL VERBOSE BOTS -v]")
         print("IMPORTANT: Only supports python 3.10 and higher")
         print()
     else:
         # Server network information
         # Gets port from argument in console
-        host = '127.0.0.1'
-        port = int(sys.argv[1])
+        host = sys.argv[1]
+        port = int(sys.argv[2])
         client = ''
 
         # Setting up socket and binds to ip and port. Sets the socket in listen()
@@ -163,7 +163,7 @@ try:
         try:
             try:
                 # If user wants all comments prints
-                if sys.argv[3] == "-v":
+                if sys.argv[4] == "-v":
                     verbose = True
                 else:
                     verbose = False
@@ -172,7 +172,7 @@ try:
 
 
             # Starting all bots as clients if user has specified
-            if sys.argv[2] == '-b':
+            if sys.argv[3] == '-b':
                 i = 0
                 for b in bots.bots:
                     var = f"proc{i}"
@@ -182,9 +182,9 @@ try:
 
                     # If user had specifies verbose bots
                     if verbose:
-                        processes[i] = subprocess.Popen(["python3", ".\client.py", f"{b}", "-v"])
+                        processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", f"{int(port)}", f"{b}", "-v"])
                     else:
-                        processes[i] = subprocess.Popen(["python3", ".\client.py", f"{b}"])
+                        processes[i] = subprocess.Popen(["python3", "client.py", f"{host}", int(port), f"{b}"])
                     i = i + 1
 
             receive()

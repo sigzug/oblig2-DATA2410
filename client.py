@@ -13,7 +13,7 @@ import bots
 
 # Connects to server and creating client information
 def connect():
-    global client
+    global client, ip, port
 
     # Saving client data
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -190,50 +190,58 @@ def disconnect():
 
 ################################### Program runs from here ######################################
 
-# Data for configuring socket
-ip = '127.0.0.1'
-port = 8888
-
-# Variables used in functions that needs to be global
-client = ""
-upBot = None
-isBot = False
-verbose = False
-
-# Input response for name of user
-# If the client is started with a name, it is in bot mode and will launch a bot instead
 try:
-    arg = sys.argv[1]
-    if arg in bots.bots:
-        user = arg
-        isBot = True
+    # If user needs help with syntax
+    if (sys.argv[1]) == str("-h"):
+        print("Usage: python3 client.py [IP ADDRESS] [PORT] [OPTIONAL BOT NAME] [OPTIONAL VERBOSE -v]")
+        print("IMPORTANT: Only supports python 3.10 and higher")
+        print()
+    else:
+        # Data for configuring socket
+        ip = sys.argv[1]
+        port = int(sys.argv[2])
+
+        # Variables used in functions that needs to be global
+        client = ""
+        upBot = None
+        isBot = False
+        verbose = False
+
+        # Input response for name of user
+        # If the client is started with a name, it is in bot mode and will launch a bot instead
+        try:
+            arg = sys.argv[3]
+            if arg in bots.bots:
+                user = arg
+                isBot = True
+        except:
+            user = input("Name of user: ").lower()
+
+        # If user has specified verbose bot, sets boolean
+        try:
+            arg = sys.argv[4]
+            if arg == "-v":
+                verbose = True
+        except:
+            verbose = False
+
+        # Connecting to the server
+        connect()
+
+        # If client is marked as bot, starts thread in bot function. If verbose is True --> turns on prints
+        # If human, starts the normal client receive function
+        if isBot:
+            botThread = threading.Thread(target=bot, args=(verbose,))
+            botThread.start()
+        else:
+            # Threading threads
+            receiveThread = threading.Thread(target=receive)
+            receiveThread.start()
+
+            # Starts write function in thread which is for typing.
+            # If bot, the write function can be used to close the thread
+            writeThread = threading.Thread(target=write)
+            writeThread.start()
 except:
-    user = input("Name of user: ").lower()
-
-# If user has specified verbose bot, sets boolean
-try:
-    arg = sys.argv[2]
-    if arg == "-v":
-        verbose = True
-except:
-    verbose = False
-
-# Connecting to the server
-connect()
-
-# If client is marked as bot, starts thread in bot function. If verbose is True --> turns on prints
-# If human, starts the normal client receive function
-if isBot:
-    botThread = threading.Thread(target=bot, args=(verbose,))
-    botThread.start()
-else:
-    # Threading threads
-    receiveThread = threading.Thread(target=receive)
-    receiveThread.start()
-
-    # Starts write function in thread which is for typing.
-    # If bot, the write function can be used to close the thread
-    writeThread = threading.Thread(target=write)
-    writeThread.start()
-
+    print("\nWrong syntax. Type -h for help!\n")
 
